@@ -4,7 +4,7 @@ import me from "../assets/img/me.webp"
 const Mobile = (props) => {
     return (
         <>
-            <div className="container d-sm-none mt-5">
+            <div className="container d-md-none mt-5">
       <div className="row">
         <div className="d-sm-12 mx-auto">
             <u className='text-light'>

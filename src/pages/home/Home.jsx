@@ -4,7 +4,6 @@ import me from "../../assets/img/me.webp";
 import {Link} from "react-router-dom"
 import Bg from "../../components/Bg";
 import Mobile from "../../components/Mobile";
-import Sm from "../../components/Sm";
 
 const Home = () => {
   React.useEffect(() => {
@@ -25,12 +24,6 @@ const Home = () => {
             <Link to="/tentang" className="btn btn-light m-1">Lihat Lebih Banyak</Link>
           </div>
     </Bg>
-    <Sm>
-    <p className="mt-2 text-light p-3" align='justify'>Lahir pada 11 Mei 1989. Dengan Pengalaman lebih dari beberapa tahun di front-end dan back-end. Bergairah dalam mempelajari hal baru dan selalu mengikuti perkembangan teknologi terkini</p>
-    <div className="d-flex w-100 justify-content-center">
-            <Link to="/tentang" className="btn btn-light m-1">Lihat Lebih Banyak</Link>
-    </div>
-    </Sm>
     <Mobile>
     <p className="mt-2 text-light p-3" align='justify'>Lahir pada 11 Mei 1989. Dengan Pengalaman lebih dari beberapa tahun di front-end dan back-end. Bergairah dalam mempelajari hal baru dan selalu mengikuti perkembangan teknologi terkini</p>
     <div className="d-flex w-100 justify-content-center">

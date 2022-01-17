@@ -2,7 +2,6 @@ import React from 'react';
 import contact from "../../assets/img/contact.svg"
 import Bg from '../../components/Bg';
 import Mobile from '../../components/Mobile';
-import Sm from '../../components/Sm';
 import Bottom from './Bottom';
 const Contact = () => {
     return (
@@ -16,9 +15,6 @@ const Contact = () => {
                 </div>
             </div>
         </Bg>
-        <Sm>
-        <Bottom/>
-        </Sm>
         <Mobile>
         <Bottom/>
         </Mobile>

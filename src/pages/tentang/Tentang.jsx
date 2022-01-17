@@ -8,7 +8,6 @@ import workplace from "../../assets/img/workplace.gif"
 import phising from "../../assets/img/phishing.gif"
 import Modal from './Modal';
 import Mobile from '../../components/Mobile';
-import Sm from '../../components/Sm';
 
 
 const img=[{id:'project',img:desk},{id:'pendidikan',img:diploma},{id:'skill',img:folders},{id:'pengalaman',img:workplace},{id:'data',img:phising}]
@@ -33,19 +32,6 @@ const Tentang = () => {
                 </div>
                 </div>
             </Bg>
-            <Sm>
-            <div className="d-flex flex-column justify-content-center align-items-center mt-3">
-                    <h3 className='text-light'>Tentang saya</h3>
-                    <hr className='text-ligh' />
-                    <div className="d-flex flex-wrap justify-content-around">
-                    {img.map((row,i)=>(
-                    <a href='#' role='button' key={i} className='m-1' data-toggle="modal" data-target={`#${row.id}`} style={{width:'80px',height:'80px',overflow:'hidden'}}>
-                        <img src={row.img} alt="desk" className='w-100' />
-                    </a>
-                    ))}
-                    </div>
-                </div>
-            </Sm>
             <Mobile>
             <div className="d-flex flex-column justify-content-center align-items-center mt-3">
                     <h3 className='text-light'>Tentang saya</h3>

@@ -1,10 +1,10 @@
 import React from 'react';
 import me from "../assets/img/me.webp"
 
-const Mobile = (props) => {
+const Sm = (props) => {
     return (
         <>
-            <div className="container d-sm-none mt-5">
+            <div className="container d-none d-sm-block mt-5">
       <div className="row">
         <div className="d-sm-12 mx-auto">
             <u className='text-light'>
@@ -22,4 +22,4 @@ const Mobile = (props) => {
     );
 };
 
-export default Mobile;
+export default Sm;

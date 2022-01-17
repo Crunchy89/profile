@@ -15,4 +15,4 @@ ReactDOM.render(
   </RecoilRoot>,
   document.getElementById("root")
 );
-serviceWorker.register();
+serviceWorker.unregister();

@@ -42,90 +42,125 @@ const MangaDetail = ({ mangaId }: MangaDetailProps) => {
   const [loading, setLoading] = useState(false)
   const [loadingChapters, setLoadingChapters] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [chaptersError, setChaptersError] = useState<string | null>(null)
 
   // Refs to prevent duplicate fetches on reload
   const fetchedMangaDetailRef = useRef<number | null>(null)
   const fetchedChaptersRef = useRef<number | null>(null)
+  const fetchingRef = useRef<{ manga: boolean; chapters: boolean }>({ manga: false, chapters: false })
 
   // Memoized fetchMangaDetail function
   const fetchMangaDetail = useCallback(async () => {
-    // Prevent duplicate fetch if already fetched for this manga
-    if (fetchedMangaDetailRef.current === mangaId) {
+    // Prevent duplicate fetch if already fetched for this manga or currently fetching
+    if (fetchedMangaDetailRef.current === mangaId || fetchingRef.current.manga) {
       return
     }
 
     setLoading(true)
     setError(null)
+    fetchingRef.current.manga = true
     fetchedMangaDetailRef.current = mangaId
 
     try {
       const response = await fetchJikan(`https://api.jikan.moe/v4/manga/${mangaId}/full`)
       if (!response.ok) {
-        throw new Error('Failed to fetch manga details')
+        throw new Error(`Failed to fetch manga details: ${response.status} ${response.statusText}`)
       }
       const data = await response.json()
+      if (!data || !data.data) {
+        throw new Error('Invalid response format from API')
+      }
       setMangaDetail(data.data)
     } catch (err) {
-      setError('Failed to load manga details')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load manga details'
+      setError(errorMessage)
       console.error('Error fetching manga detail:', err)
       fetchedMangaDetailRef.current = null
     } finally {
       setLoading(false)
+      fetchingRef.current.manga = false
     }
   }, [mangaId])
 
   // Memoized fetchChapters function
   const fetchChapters = useCallback(async () => {
-    // Prevent duplicate fetch if already fetched for this manga
-    if (fetchedChaptersRef.current === mangaId) {
+    // Prevent duplicate fetch if already fetched for this manga or currently fetching
+    if (fetchedChaptersRef.current === mangaId || fetchingRef.current.chapters) {
       return
     }
 
     setLoadingChapters(true)
+    setChaptersError(null)
+    fetchingRef.current.chapters = true
     fetchedChaptersRef.current = mangaId
 
     try {
       // Get manga title from detail first with rate limiting
       const detailResponse = await fetchJikan(`https://api.jikan.moe/v4/manga/${mangaId}`)
-      if (!detailResponse.ok) return
+      if (!detailResponse.ok) {
+        throw new Error(`Failed to fetch manga title: ${detailResponse.status} ${detailResponse.statusText}`)
+      }
       
       const detailData = await detailResponse.json()
+      if (!detailData || !detailData.data) {
+        throw new Error('Invalid response format when fetching manga title')
+      }
+      
       const mangaTitle = detailData.data.title_english || detailData.data.title
+      if (!mangaTitle) {
+        throw new Error('Manga title not found')
+      }
 
       // Search MangaDex for the manga with rate limiting
       const searchResponse = await fetchMangaDex(
         `https://api.mangadex.org/manga?title=${encodeURIComponent(mangaTitle)}&limit=5`
       )
       if (!searchResponse.ok) {
-        throw new Error('Failed to search MangaDex')
+        throw new Error(`Failed to search MangaDex: ${searchResponse.status} ${searchResponse.statusText}`)
       }
       const searchData = await searchResponse.json()
       
-      if (searchData.data && searchData.data.length > 0) {
-        const mangaDexId = searchData.data[0].id
-        
-        // Get chapters for this manga with rate limiting
-        const chaptersResponse = await fetchMangaDex(
-          `https://api.mangadex.org/manga/${mangaDexId}/feed?translatedLanguage[]=en&order[chapter]=asc&limit=100`
-        )
-        if (!chaptersResponse.ok) {
-          throw new Error('Failed to fetch chapters')
-        }
-        const chaptersData: FeedResponse = await chaptersResponse.json()
-        
-        // Just list chapters without fetching pages (pages will be fetched when chapter is opened)
-        // Use proper MangaDex API types
-        const chaptersList: Chapter[] = chaptersData.data
-          .slice(0, 100)
-          .map(mapMangaDexChapterToChapter)
-        
-        setChapters(chaptersList.sort((a, b) => parseFloat(a.chapter) - parseFloat(b.chapter)))
+      if (!searchData || !searchData.data || searchData.data.length === 0) {
+        throw new Error('No matching manga found on MangaDex')
       }
+      
+      const mangaDexId = searchData.data[0].id
+      if (!mangaDexId) {
+        throw new Error('Invalid MangaDex ID')
+      }
+      
+      // Get chapters for this manga with rate limiting
+      const chaptersResponse = await fetchMangaDex(
+        `https://api.mangadex.org/manga/${mangaDexId}/feed?translatedLanguage[]=en&order[chapter]=asc&limit=100`
+      )
+      if (!chaptersResponse.ok) {
+        throw new Error(`Failed to fetch chapters: ${chaptersResponse.status} ${chaptersResponse.statusText}`)
+      }
+      const chaptersData: FeedResponse = await chaptersResponse.json()
+      
+      if (!chaptersData || !chaptersData.data) {
+        throw new Error('Invalid chapters response format')
+      }
+      
+      // Just list chapters without fetching pages (pages will be fetched when chapter is opened)
+      // Use proper MangaDex API types
+      const chaptersList: Chapter[] = chaptersData.data
+        .slice(0, 100)
+        .map(mapMangaDexChapterToChapter)
+      
+      setChapters(chaptersList.sort((a, b) => {
+        const aNum = parseFloat(a.chapter) || 0
+        const bNum = parseFloat(b.chapter) || 0
+        return aNum - bNum
+      }))
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load chapters'
+      setChaptersError(errorMessage)
       console.error('Error fetching chapters:', err)
       fetchedChaptersRef.current = null
     } finally {
       setLoadingChapters(false)
+      fetchingRef.current.chapters = false
     }
   }, [mangaId])
 
@@ -145,13 +180,26 @@ const MangaDetail = ({ mangaId }: MangaDetailProps) => {
     navigate('/manga')
   }, [navigate])
 
+  // Reset refs when mangaId changes
+  useEffect(() => {
+    if (fetchedMangaDetailRef.current !== mangaId) {
+      fetchedMangaDetailRef.current = null
+      fetchedChaptersRef.current = null
+      fetchingRef.current = { manga: false, chapters: false }
+      setMangaDetail(null)
+      setChapters([])
+      setError(null)
+      setChaptersError(null)
+    }
+  }, [mangaId])
+
   // Fetch data when mangaId changes
   useEffect(() => {
     // Only fetch if we don't have the data or it's a different manga
-    if (fetchedMangaDetailRef.current !== mangaId) {
+    if (fetchedMangaDetailRef.current !== mangaId && !fetchingRef.current.manga) {
       fetchMangaDetail()
     }
-    if (fetchedChaptersRef.current !== mangaId) {
+    if (fetchedChaptersRef.current !== mangaId && !fetchingRef.current.chapters) {
       fetchChapters()
     }
   }, [mangaId, fetchMangaDetail, fetchChapters])
@@ -256,6 +304,19 @@ const MangaDetail = ({ mangaId }: MangaDetailProps) => {
               {loadingChapters ? (
                 <div className="flex justify-center py-8">
                   <FaSpinner className="text-2xl text-elegant-accent animate-spin" />
+                </div>
+              ) : chaptersError ? (
+                <div className="text-center py-8">
+                  <p className="text-elegant-charcoal mb-4">{chaptersError}</p>
+                  <button
+                    onClick={() => {
+                      fetchedChaptersRef.current = null
+                      fetchChapters()
+                    }}
+                    className="px-4 py-2 bg-elegant-accent text-white rounded-lg hover:bg-elegant-accent/90 transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               ) : chapters.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">

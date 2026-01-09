@@ -6,6 +6,9 @@ interface RetryOptions {
   backoffMultiplier?: number
 }
 
+// Check if we're in production (Vercel)
+const isProduction = import.meta.env.PROD
+
 // Simple rate limiter
 class RateLimiter {
   private lastRequestTime: number = 0
@@ -83,7 +86,21 @@ export async function fetchJikan(
   options: RequestInit = {}
 ): Promise<Response> {
   await jikanRateLimiter.waitIfNeeded()
-  return fetchWithRetry(url, options, {
+  
+  // In production, use proxy endpoint to avoid CORS issues
+  let targetUrl = url
+  if (isProduction && url.includes('api.jikan.moe')) {
+    // Extract the path after /v4/ from the original URL
+    const urlObj = new URL(url)
+    const pathMatch = urlObj.pathname.match(/\/v4\/(.+)$/)
+    if (pathMatch) {
+      const path = pathMatch[1]
+      const query = urlObj.search
+      targetUrl = `/api/jikan/${path}${query}`
+    }
+  }
+  
+  return fetchWithRetry(targetUrl, options, {
     maxRetries: 3,
     retryDelay: 1000,
     backoffMultiplier: 2
@@ -96,7 +113,18 @@ export async function fetchMangaDex(
   options: RequestInit = {}
 ): Promise<Response> {
   await mangadexRateLimiter.waitIfNeeded()
-  return fetchWithRetry(url, options, {
+  
+  // In production, use proxy endpoint to avoid CORS issues
+  let targetUrl = url
+  if (isProduction && url.includes('api.mangadex.org')) {
+    // Extract the path after api.mangadex.org/ from the original URL
+    const urlObj = new URL(url)
+    const path = urlObj.pathname
+    const query = urlObj.search
+    targetUrl = `/api/mangadex${path}${query}`
+  }
+  
+  return fetchWithRetry(targetUrl, options, {
     maxRetries: 3,
     retryDelay: 800,
     backoffMultiplier: 1.5

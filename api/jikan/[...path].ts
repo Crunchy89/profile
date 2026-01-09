@@ -4,20 +4,30 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    return res.status(200).end()
+  }
+
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   // Get the path from the catch-all route
-  const path = Array.isArray(req.query.path) 
-    ? req.query.path.join('/') 
-    : req.query.path || ''
+  // In Vercel, catch-all routes use the route name as the query key
+  const pathParam = req.query.path || req.query['...path']
+  const path = Array.isArray(pathParam) 
+    ? pathParam.join('/') 
+    : (pathParam as string) || ''
 
-  // Build query string from query parameters (excluding 'path')
+  // Build query string from query parameters (excluding 'path' and '...path')
   const queryParams = new URLSearchParams()
   Object.entries(req.query).forEach(([key, value]) => {
-    if (key !== 'path') {
+    if (key !== 'path' && key !== '...path') {
       if (Array.isArray(value)) {
         value.forEach(v => queryParams.append(key, String(v)))
       } else if (value) {
@@ -29,6 +39,9 @@ export default async function handler(
   
   // Construct the full URL
   const targetUrl = `https://api.jikan.moe/v4/${path}${queryString ? `?${queryString}` : ''}`
+  
+  // Log for debugging (remove in production if needed)
+  console.log('Jikan proxy - path:', path, 'targetUrl:', targetUrl)
 
   try {
     // Forward the request to Jikan API

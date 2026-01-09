@@ -3,14 +3,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "vite",
-  "functions": {
-    "api/jikan/[...path].ts": {
-      "runtime": "@vercel/node"
-    },
-    "api/mangadex/[...path].ts": {
-      "runtime": "@vercel/node"
-    }
-  },
   "rewrites": [
     {
       "source": "/((?!api/).*)",
